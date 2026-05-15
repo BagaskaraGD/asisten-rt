@@ -3,6 +3,7 @@
 import { classifyIntent } from '@/lib/ai/classifier'
 import { findFaqAnswer } from '@/lib/ai/faq-matcher'
 import { parseFieldValues } from '@/lib/ai/field-parser'
+import { extractComplaint } from '@/lib/ai/complaint-extractor'
 import {
   getFAQs,
   getLetterTemplate,
@@ -42,12 +43,19 @@ Pengurus akan meninjau dan menghubungi Anda jika diperlukan.
 
 Status: Menunggu persetujuan admin RT`
 
-const COMPLAINT_RESPONSE = `Terima kasih telah melaporkan. Laporan Anda sudah saya catat 📢
+const COMPLAINT_OFFLINE = `Laporan Anda telah kami catat sementara 📢
 
-Fitur pencatatan laporan otomatis sedang dalam pengembangan. Setelah aktif, laporan
-Anda akan langsung masuk ke sistem dan pengurus RT akan menerima notifikasi.
+Untuk keperluan mendesak, silakan hubungi pengurus RT atau keamanan setempat
+secara langsung di 0812-0000-0000.`
 
-Untuk saat ini, silakan hubungi pengurus RT atau keamanan setempat jika mendesak.`
+const CATEGORY_LABELS: Record<string, string> = {
+  fasilitas_umum: 'Fasilitas Umum',
+  keamanan: 'Keamanan',
+  kebersihan: 'Kebersihan',
+  administrasi: 'Administrasi',
+  sosial: 'Sosial',
+  lainnya: 'Lainnya',
+}
 
 const STATUS_RESPONSE = `Untuk mengecek status permintaan surat atau laporan keluhan Anda,
 fitur pelacakan status sedang dalam pengembangan.
@@ -320,6 +328,52 @@ async function handleSlotFilling(
   return { reply: LETTER_COMPLETE, completed: true }
 }
 
+// ─── Complaint handler ────────────────────────────────────────────────────────
+
+async function handleComplaint(message: string): Promise<string> {
+  const { category, urgency, location } = extractComplaint(message)
+
+  const categoryLabel = CATEGORY_LABELS[category] ?? category
+  const urgencyLabel = urgency === 'tinggi' ? 'Tinggi 🔴' : 'Sedang 🟡'
+  const locationDisplay = location ?? 'Tidak disebutkan'
+
+  if (!isSupabaseConfigured()) return COMPLAINT_OFFLINE
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('complaint_reports')
+    .insert({
+      rt_id: DEFAULT_RT_ID,
+      user_id: null,
+      category,
+      description: message,
+      location,
+      urgency,
+      status: 'new',
+    })
+    .select('id')
+    .single()
+
+  if (error || !data) {
+    console.error('[handleComplaint] error:', error?.message)
+    return COMPLAINT_OFFLINE
+  }
+
+  const shortId = data.id.slice(0, 8).toUpperCase()
+
+  return `Laporan Anda telah kami terima dan dicatat 📢
+
+Ringkasan laporan:
+• Kategori  : ${categoryLabel}
+• Lokasi    : ${locationDisplay}
+• Urgensi   : ${urgencyLabel}
+
+Laporan ini akan segera ditinjau oleh pengurus RT.
+Untuk keperluan mendesak, hubungi keamanan di 0812-0000-0000.
+
+ID Laporan : ${shortId}`
+}
+
 // ─── Generate reply untuk intent lain ────────────────────────────────────────
 
 async function generateReply(intent: AiIntent, message: string): Promise<string> {
@@ -339,7 +393,7 @@ async function generateReply(intent: AiIntent, message: string): Promise<string>
     }
 
     case 'submit_complaint':
-      return COMPLAINT_RESPONSE
+      return handleComplaint(message)
 
     case 'ask_status':
       return STATUS_RESPONSE

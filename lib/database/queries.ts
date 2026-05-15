@@ -149,6 +149,24 @@ export async function getComplaintReports(
   return (data ?? []) as ComplaintReportRow[]
 }
 
+export async function getComplaintReport(id: string): Promise<ComplaintReportRow | null> {
+  if (!isSupabaseConfigured()) return null
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('complaint_reports')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    console.error('[getComplaintReport] error:', error.message)
+    return null
+  }
+
+  return data as ComplaintReportRow
+}
+
 // ─── Letter Templates ─────────────────────────────────────────────────────────
 
 export async function getLetterTemplate(
