@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/types'
 
@@ -11,11 +12,6 @@ export type UserWithRole = {
   role: UserRole
 }
 
-/**
- * Membaca user yang sedang login dari session Supabase.
- * Menggunakan getUser() (bukan getSession()) agar token divalidasi ke server Auth.
- * Mengembalikan null jika tidak ada session aktif.
- */
 export async function getUser(): Promise<AuthUser | null> {
   const supabase = await createClient()
   const {
@@ -28,11 +24,6 @@ export async function getUser(): Promise<AuthUser | null> {
   return { id: user.id, email: user.email }
 }
 
-/**
- * Membaca role user dari tabel `users` aplikasi berdasarkan email.
- * Role TIDAK dibaca dari metadata auth.users agar lebih aman dan terkontrol.
- * Mengembalikan null jika user tidak ditemukan di tabel `users`.
- */
 export async function getUserRole(email: string): Promise<UserRole | null> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -46,16 +37,16 @@ export async function getUserRole(email: string): Promise<UserRole | null> {
   return data.role as UserRole
 }
 
-/**
- * Shortcut: dapatkan user dan rolenya sekaligus.
- * Mengembalikan null jika tidak ada session atau user tidak ada di tabel `users`.
- */
-export async function getCurrentUserWithRole(): Promise<UserWithRole | null> {
-  const user = await getUser()
-  if (!user) return null
+// cache() deduplicates calls dalam satu request RSC tree.
+// Layout dan page child bisa memanggil ini tanpa double round-trip ke Supabase.
+export const getCurrentUserWithRole = cache(
+  async (): Promise<UserWithRole | null> => {
+    const user = await getUser()
+    if (!user) return null
 
-  const role = await getUserRole(user.email)
-  if (!role) return null
+    const role = await getUserRole(user.email)
+    if (!role) return null
 
-  return { user, role }
-}
+    return { user, role }
+  }
+)
