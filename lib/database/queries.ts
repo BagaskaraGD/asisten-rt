@@ -32,7 +32,7 @@ export async function getRTProfile(rtId: string = DEFAULT_RT_ID): Promise<RtRow 
 }
 
 /**
- * Mengambil semua FAQ aktif untuk satu RT.
+ * Mengambil semua FAQ aktif untuk satu RT (dipakai AI dan chat warga).
  * Mengembalikan array kosong jika Supabase belum dikonfigurasi.
  */
 export async function getFAQs(rtId: string = DEFAULT_RT_ID): Promise<FaqRow[]> {
@@ -52,6 +52,51 @@ export async function getFAQs(rtId: string = DEFAULT_RT_ID): Promise<FaqRow[]> {
   }
 
   return (data ?? []) as FaqRow[]
+}
+
+/**
+ * Mengambil SEMUA FAQ (aktif dan nonaktif) untuk keperluan admin CRUD.
+ * Diurutkan: aktif lebih dulu, lalu created_at ascending.
+ */
+export async function getAllFAQs(rtId: string = DEFAULT_RT_ID): Promise<FaqRow[]> {
+  if (!isSupabaseConfigured()) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('faqs')
+    .select('*')
+    .eq('rt_id', rtId)
+    .order('is_active', { ascending: false })
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('[getAllFAQs] error:', error.message)
+    return []
+  }
+
+  return (data ?? []) as FaqRow[]
+}
+
+/**
+ * Mengambil satu FAQ berdasarkan ID (untuk halaman edit).
+ * Mengembalikan null jika tidak ditemukan.
+ */
+export async function getFaqById(id: string): Promise<FaqRow | null> {
+  if (!isSupabaseConfigured()) return null
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('faqs')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    console.error('[getFaqById] error:', error.message)
+    return null
+  }
+
+  return data as FaqRow
 }
 
 /**
