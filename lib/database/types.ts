@@ -33,9 +33,23 @@ export type LetterTemplateRow = {
   id: string
   rt_id: string
   letter_type: string
-  required_fields: unknown[]
+  required_fields: string[]
   template_body: string
   is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export type LetterRequestRow = {
+  id: string
+  rt_id: string
+  user_id: string | null
+  letter_type: string
+  status: string
+  form_data: Record<string, string>
+  draft_text: string | null
+  admin_notes: string | null
+  approved_by: string | null
   created_at: string
   updated_at: string
 }

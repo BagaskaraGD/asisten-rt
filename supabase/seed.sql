@@ -51,3 +51,90 @@ insert into faqs (rt_id, question, answer, category) values
   'Warga perlu mengirim nama lengkap, NIK, nomor KK, alamat, dan keperluan surat. Draft akan dibuat oleh sistem dan divalidasi oleh Ketua RT atau Sekretaris.',
   'surat'
 );
+
+-- ─── Letter Templates ──────────────────────────────────────────────────────────
+-- Jalankan bagian ini di Supabase SQL Editor jika letter_templates masih kosong.
+
+insert into letter_templates (rt_id, letter_type, required_fields, template_body, is_active) values
+(
+  '11111111-1111-1111-1111-111111111111',
+  'domisili',
+  '["nama_lengkap", "nik", "nomor_kk", "alamat", "keperluan"]',
+  $$SURAT KETERANGAN DOMISILI
+Nomor: -/-/RT03/RW05/{TAHUN}
+
+Yang bertanda tangan di bawah ini Ketua RT 03 RW 05 Perumahan Griya Damai,
+Kelurahan Keputih, Kecamatan Sukolilo, Kota Surabaya, menerangkan bahwa:
+
+Nama Lengkap : {nama_lengkap}
+NIK          : {nik}
+No. KK       : {nomor_kk}
+Alamat       : {alamat}
+
+adalah benar-benar warga RT 03 RW 05 Perumahan Griya Damai.
+
+Surat keterangan ini diberikan untuk keperluan: {keperluan}
+
+Surabaya, {TANGGAL}
+Ketua RT 03 RW 05
+
+Bapak Ahmad$$,
+  true
+),
+(
+  '11111111-1111-1111-1111-111111111111',
+  'skck',
+  '["nama_lengkap", "nik", "tempat_lahir", "tanggal_lahir", "jenis_kelamin", "agama", "pekerjaan", "alamat", "keperluan"]',
+  $$SURAT PENGANTAR PERMOHONAN SKCK
+Nomor: -/-/RT03/RW05/{TAHUN}
+
+Yang bertanda tangan di bawah ini Ketua RT 03 RW 05 Perumahan Griya Damai
+menerangkan bahwa:
+
+Nama Lengkap      : {nama_lengkap}
+NIK               : {nik}
+Tempat, Tgl Lahir : {tempat_lahir}, {tanggal_lahir}
+Jenis Kelamin     : {jenis_kelamin}
+Agama             : {agama}
+Pekerjaan         : {pekerjaan}
+Alamat            : {alamat}
+
+adalah warga RT 03 RW 05 Perumahan Griya Damai yang berkelakuan baik dan tidak
+pernah terlibat tindak kriminal selama berdomisili di wilayah ini.
+
+Surat ini dibuat untuk keperluan: {keperluan}
+
+Surabaya, {TANGGAL}
+Ketua RT 03 RW 05
+
+Bapak Ahmad$$,
+  true
+),
+(
+  '11111111-1111-1111-1111-111111111111',
+  'sku',
+  '["nama_lengkap", "nik", "nama_usaha", "jenis_usaha", "alamat_usaha", "alamat"]',
+  $$SURAT KETERANGAN USAHA
+Nomor: -/-/RT03/RW05/{TAHUN}
+
+Yang bertanda tangan di bawah ini Ketua RT 03 RW 05 Perumahan Griya Damai
+menerangkan bahwa:
+
+Nama Lengkap  : {nama_lengkap}
+NIK           : {nik}
+Alamat        : {alamat}
+
+adalah benar-benar menjalankan usaha dengan keterangan:
+
+Nama Usaha    : {nama_usaha}
+Jenis Usaha   : {jenis_usaha}
+Alamat Usaha  : {alamat_usaha}
+
+Demikian surat keterangan ini dibuat untuk dapat dipergunakan sebagaimana mestinya.
+
+Surabaya, {TANGGAL}
+Ketua RT 03 RW 05
+
+Bapak Ahmad$$,
+  true
+);

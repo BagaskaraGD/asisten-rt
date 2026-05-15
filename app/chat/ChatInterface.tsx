@@ -110,6 +110,7 @@ export default function ChatInterface() {
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
+  const [letterRequestId, setLetterRequestId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const isOffline = !isSupabaseConfigured()
@@ -136,8 +137,9 @@ export default function ChatInterface() {
     setIsLoading(true)
 
     try {
-      const result = await sendMessage(trimmed, sessionId)
+      const result = await sendMessage(trimmed, sessionId, letterRequestId)
       setSessionId(result.sessionId)
+      setLetterRequestId(result.letterRequestId)
       setMessages((prev) => [
         ...prev,
         {
@@ -160,7 +162,7 @@ export default function ChatInterface() {
       setIsLoading(false)
       textareaRef.current?.focus()
     }
-  }, [input, isLoading, sessionId])
+  }, [input, isLoading, sessionId, letterRequestId])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -325,6 +327,15 @@ export default function ChatInterface() {
                 <p className="text-xs font-semibold text-green-800">✅ Percakapan tersimpan</p>
                 <p className="mt-0.5 text-[10px] text-green-600 font-mono break-all">
                   {sessionId.slice(0, 8)}...
+                </p>
+              </div>
+            )}
+
+            {letterRequestId && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <p className="text-xs font-semibold text-blue-800">📄 Permintaan surat aktif</p>
+                <p className="mt-0.5 text-[10px] text-blue-600">
+                  Sedang mengumpulkan data surat. Balas dengan format key: value.
                 </p>
               </div>
             )}

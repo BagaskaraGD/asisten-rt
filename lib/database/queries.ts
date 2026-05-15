@@ -3,6 +3,7 @@ import type {
   RtRow,
   FaqRow,
   LetterTemplateRow,
+  LetterRequestRow,
   ComplaintReportRow,
 } from '@/lib/database/types'
 
@@ -146,4 +147,69 @@ export async function getComplaintReports(
   }
 
   return (data ?? []) as ComplaintReportRow[]
+}
+
+// ─── Letter Templates ─────────────────────────────────────────────────────────
+
+export async function getLetterTemplate(
+  letterType: string,
+  rtId: string = DEFAULT_RT_ID
+): Promise<LetterTemplateRow | null> {
+  if (!isSupabaseConfigured()) return null
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('letter_templates')
+    .select('*')
+    .eq('rt_id', rtId)
+    .eq('letter_type', letterType)
+    .eq('is_active', true)
+    .single()
+
+  if (error) {
+    console.error('[getLetterTemplate] error:', error.message)
+    return null
+  }
+
+  return data as LetterTemplateRow
+}
+
+// ─── Letter Requests ──────────────────────────────────────────────────────────
+
+export async function getLetterRequest(id: string): Promise<LetterRequestRow | null> {
+  if (!isSupabaseConfigured()) return null
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('letter_requests')
+    .select('*')
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    console.error('[getLetterRequest] error:', error.message)
+    return null
+  }
+
+  return data as LetterRequestRow
+}
+
+export async function getAllLetterRequests(
+  rtId: string = DEFAULT_RT_ID
+): Promise<LetterRequestRow[]> {
+  if (!isSupabaseConfigured()) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('letter_requests')
+    .select('*')
+    .eq('rt_id', rtId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[getAllLetterRequests] error:', error.message)
+    return []
+  }
+
+  return (data ?? []) as LetterRequestRow[]
 }
