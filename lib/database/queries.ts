@@ -1,0 +1,104 @@
+import { isSupabaseConfigured, createClient } from '@/lib/supabase/server'
+import type {
+  RtRow,
+  FaqRow,
+  LetterTemplateRow,
+  ComplaintReportRow,
+} from '@/lib/database/types'
+
+// ID RT default dari seed data.
+export const DEFAULT_RT_ID = '11111111-1111-1111-1111-111111111111'
+
+/**
+ * Mengambil profil RT berdasarkan ID.
+ * Mengembalikan null jika Supabase belum dikonfigurasi atau data tidak ditemukan.
+ */
+export async function getRTProfile(rtId: string = DEFAULT_RT_ID): Promise<RtRow | null> {
+  if (!isSupabaseConfigured()) return null
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('rts')
+    .select('*')
+    .eq('id', rtId)
+    .single()
+
+  if (error) {
+    console.error('[getRTProfile] error:', error.message)
+    return null
+  }
+
+  return data as RtRow
+}
+
+/**
+ * Mengambil semua FAQ aktif untuk satu RT.
+ * Mengembalikan array kosong jika Supabase belum dikonfigurasi.
+ */
+export async function getFAQs(rtId: string = DEFAULT_RT_ID): Promise<FaqRow[]> {
+  if (!isSupabaseConfigured()) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('faqs')
+    .select('*')
+    .eq('rt_id', rtId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('[getFAQs] error:', error.message)
+    return []
+  }
+
+  return (data ?? []) as FaqRow[]
+}
+
+/**
+ * Mengambil semua template surat aktif untuk satu RT.
+ * Mengembalikan array kosong jika Supabase belum dikonfigurasi.
+ */
+export async function getLetterTemplates(
+  rtId: string = DEFAULT_RT_ID
+): Promise<LetterTemplateRow[]> {
+  if (!isSupabaseConfigured()) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('letter_templates')
+    .select('*')
+    .eq('rt_id', rtId)
+    .eq('is_active', true)
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.error('[getLetterTemplates] error:', error.message)
+    return []
+  }
+
+  return (data ?? []) as LetterTemplateRow[]
+}
+
+/**
+ * Mengambil semua laporan keluhan untuk satu RT.
+ * Mengembalikan array kosong jika Supabase belum dikonfigurasi.
+ */
+export async function getComplaintReports(
+  rtId: string = DEFAULT_RT_ID
+): Promise<ComplaintReportRow[]> {
+  if (!isSupabaseConfigured()) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('complaint_reports')
+    .select('*')
+    .eq('rt_id', rtId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[getComplaintReports] error:', error.message)
+    return []
+  }
+
+  return (data ?? []) as ComplaintReportRow[]
+}

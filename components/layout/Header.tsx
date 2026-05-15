@@ -1,10 +1,12 @@
 import Link from 'next/link'
+import { logout } from '@/app/actions/auth'
 
 interface HeaderProps {
   variant?: 'landing' | 'admin' | 'warga'
+  userName?: string
 }
 
-export default function Header({ variant = 'landing' }: HeaderProps) {
+export default function Header({ variant = 'landing', userName }: HeaderProps) {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -15,7 +17,7 @@ export default function Header({ variant = 'landing' }: HeaderProps) {
           <span className="text-lg font-bold text-gray-900">AsistenRT</span>
         </Link>
 
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-3">
           {variant === 'landing' && (
             <>
               <Link
@@ -34,9 +36,24 @@ export default function Header({ variant = 'landing' }: HeaderProps) {
           )}
 
           {variant === 'admin' && (
-            <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
-              Panel Admin
-            </span>
+            <>
+              <span className="hidden rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800 sm:inline">
+                Panel Admin
+              </span>
+              {userName && (
+                <span className="hidden max-w-[160px] truncate text-sm text-gray-500 lg:block">
+                  {userName}
+                </span>
+              )}
+              <form action={logout}>
+                <button
+                  type="submit"
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                >
+                  Logout
+                </button>
+              </form>
+            </>
           )}
 
           {variant === 'warga' && (
