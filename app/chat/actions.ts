@@ -4,6 +4,11 @@ import { classifyIntent } from '@/lib/ai/classifier'
 import { findFaqAnswer } from '@/lib/ai/faq-matcher'
 import { parseFieldValues } from '@/lib/ai/field-parser'
 import { extractComplaint } from '@/lib/ai/complaint-extractor'
+import { resolveIntent } from '@/lib/ai/classify-intent'
+import { isGeminiConfigured } from '@/lib/ai/llm'
+import { retrieveTopFAQs } from '@/lib/ai/rag-retriever'
+import { answerWithRAG } from '@/lib/ai/faq-rag-answer'
+import { saveAuditLog } from '@/lib/ai/audit-log'
 import {
   getFAQs,
   getLetterTemplate,
@@ -229,6 +234,7 @@ async function getOrCreateSession(sessionId: string | null): Promise<string> {
   return data.id
 }
 
+// Hanya menyimpan chat_messages — audit log ditangani oleh saveAuditLog().
 async function persistMessages(
   sessionId: string,
   userMessage: string,
@@ -249,13 +255,6 @@ async function persistMessages(
       sender_type: 'assistant',
       message_text: aiReply,
       intent,
-    }),
-    supabase.from('ai_audit_logs').insert({
-      rt_id: DEFAULT_RT_ID,
-      input_text: userMessage,
-      detected_intent: intent,
-      ai_response: aiReply,
-      sources_used: [],
     }),
   ])
 }
@@ -376,21 +375,11 @@ ID Laporan : ${shortId}`
 
 // ─── Generate reply untuk intent lain ────────────────────────────────────────
 
+// ask_faq ditangani langsung di sendMessage (dengan opsi RAG).
 async function generateReply(intent: AiIntent, message: string): Promise<string> {
   switch (intent) {
     case 'greeting':
       return GREETING
-
-    case 'ask_faq': {
-      const faqs = await getFAQs()
-      const matched = findFaqAnswer(message, faqs)
-      if (matched) {
-        let response = `Berdasarkan informasi RT, ${matched.answer}`
-        if (matched.category) response += `\n\n📂 Kategori: ${matched.category}`
-        return response
-      }
-      return FALLBACK
-    }
 
     case 'submit_complaint':
       return handleComplaint(message)
@@ -420,26 +409,67 @@ export async function sendMessage(
   let reply: string
   let intent: AiIntent
   let newLetterRequestId = letterRequestId
+  let sourceFaqIds: string[] = []
+  let confidenceScore: number | undefined
 
   if (letterRequestId) {
-    // Ada surat aktif — proses sebagai slot filling
+    // Ada surat aktif — proses sebagai slot filling (tidak pakai LLM)
     intent = 'request_letter'
     const result = await handleSlotFilling(message, letterRequestId)
     reply = result.reply
     if (result.completed) newLetterRequestId = null
   } else {
-    intent = classifyIntent(message)
+    // Step 1: Resolve intent — LLM jika aktif, rule-based sebagai fallback
+    const classification = await resolveIntent(message)
+    intent = classification.intent
+    confidenceScore = classification.confidence
 
     if (intent === 'request_letter') {
       const result = await handleNewLetterRequest(message)
       reply = result.reply
       newLetterRequestId = result.letterRequestId
+    } else if (intent === 'ask_faq') {
+      // Step 2: FAQ answering — RAG dengan Gemini jika aktif, keyword match sebagai fallback
+      if (process.env.ENABLE_LLM_FAQ_RAG === 'true' && isGeminiConfigured()) {
+        const faqs = await getFAQs()
+        const topFaqs = retrieveTopFAQs(message, faqs, 3)
+        if (topFaqs.length > 0) {
+          const ragResult = await answerWithRAG(message, topFaqs)
+          reply = ragResult.answer
+          sourceFaqIds = ragResult.sourceFaqIds
+        } else {
+          reply = FALLBACK
+        }
+      } else {
+        // Fallback ke behavior Task 04 — keyword match top-1
+        const faqs = await getFAQs()
+        const matched = findFaqAnswer(message, faqs)
+        if (matched) {
+          let response = `Berdasarkan informasi RT, ${matched.answer}`
+          if (matched.category) response += `\n\n📂 Kategori: ${matched.category}`
+          reply = response
+          sourceFaqIds = [matched.id]
+        } else {
+          reply = FALLBACK
+        }
+      }
     } else {
       reply = await generateReply(intent, message)
     }
   }
 
-  await persistMessages(activeSessionId, message, reply, intent)
+  // Simpan chat messages dan audit log secara parallel
+  await Promise.all([
+    persistMessages(activeSessionId, message, reply, intent),
+    saveAuditLog({
+      sessionId: activeSessionId,
+      inputText: message,
+      intent,
+      aiResponse: reply,
+      sourceFaqIds,
+      confidenceScore,
+    }),
+  ])
 
   return { reply, intent, sessionId: activeSessionId, letterRequestId: newLetterRequestId }
 }
