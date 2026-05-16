@@ -5,6 +5,7 @@ import type {
   LetterTemplateRow,
   LetterRequestRow,
   ComplaintReportRow,
+  AiAuditLogRow,
 } from '@/lib/database/types'
 
 // ID RT default dari seed data.
@@ -210,6 +211,28 @@ export async function getLetterRequest(id: string): Promise<LetterRequestRow | n
   }
 
   return data as LetterRequestRow
+}
+
+export async function getAiAuditLogs(
+  rtId: string = DEFAULT_RT_ID,
+  limit: number = 100
+): Promise<AiAuditLogRow[]> {
+  if (!isSupabaseConfigured()) return []
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('ai_audit_logs')
+    .select('*')
+    .eq('rt_id', rtId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) {
+    console.error('[getAiAuditLogs] error:', error.message)
+    return []
+  }
+
+  return (data ?? []) as AiAuditLogRow[]
 }
 
 export async function getAllLetterRequests(

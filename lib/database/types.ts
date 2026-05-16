@@ -68,3 +68,15 @@ export type ComplaintReportRow = {
   created_at: string
   updated_at: string
 }
+
+export type AiAuditLogRow = {
+  id: string
+  rt_id: string
+  session_id: string | null
+  input_text: string
+  detected_intent: string
+  ai_response: string
+  sources_used: string[]
+  confidence_score: number | null
+  created_at: string
+}

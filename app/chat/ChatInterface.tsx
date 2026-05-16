@@ -312,7 +312,7 @@ export default function ChatInterface() {
             <div>
               <p className="mb-2 text-xs font-semibold text-gray-600">Jenis surat tersedia:</p>
               <ul className="space-y-1">
-                {['Keterangan Domisili', 'Pengantar SKCK', 'Keterangan Tidak Mampu', 'Pengantar Nikah'].map(
+                {['Keterangan Domisili', 'Pengantar SKCK', 'Keterangan Usaha (SKU)'].map(
                   (item) => (
                     <li key={item} className="text-xs text-gray-400">
                       • {item}
